@@ -1,7 +1,14 @@
 import React, { Component } from 'react';
-import StartBtn from './../StartBtn/StartBtn';
+import SquareBtn from '../SquareBtn/SquareBtn';
 import TwitterHandleInput from './../TwitterHandleInput/TwitterHandleInput';
-
+import {
+  BrowserRouter as Router,
+  Switch,
+  Route,
+  Link,
+  useRouteMatch,
+  useParams
+} from "react-router-dom";
 class Menu extends Component {
 
   constructor(props){
@@ -31,19 +38,9 @@ class Menu extends Component {
   render(){
     return (
       <div>
-        <h1>Change++ Coding Challenge</h1>
-        <TwitterHandleInput
-          InputName="Twitter Handle One"
-          parentCallback = {this.setHandleOne}
-        />
-        <TwitterHandleInput
-          InputName="Twitter Handle Two"
-          parentCallback = {this.setHandleTwo}
-        />
-        <StartBtn
-          parentCallback = {this.startGame}
-        />
-        <p>Try these for the meme: AnnaKendrick47, owlcity, Kanyewest, cher, elonmusk</p>
+        <h1>JukeBot</h1>
+        <Link to="/joinlobby">Join Lobby</Link>
+        <Link to="/createlobby">Create Lobby</Link>
       </div>
     );
   }

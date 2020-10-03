@@ -1,13 +1,14 @@
 import React, { Component } from 'react';
-import './StartBtn.css';
+import './SquareBtn.css';
 
-class StartBtn extends Component {
+class SquareBtn extends Component {
 
   constructor(props){
     super(props)
 
     this.state = {
-      startCallback: this.props.parentCallback
+      startCallback: this.props.parentCallback,
+      name: this.props.name
     }
   }
 
@@ -21,7 +22,7 @@ class StartBtn extends Component {
               <polyline points="179,1 179,59 1,59 1,1 179,1" className="bg-line" />
               <polyline points="179,1 179,59 1,59 1,1 179,1" className="hl-line" />
             </svg>
-            <span>START GAME</span>
+            <span>{this.props.name}</span>
           </button>
         </div>
       </div>
@@ -30,6 +31,6 @@ class StartBtn extends Component {
   
 }
 
-export default StartBtn;
+export default SquareBtn;
 
 

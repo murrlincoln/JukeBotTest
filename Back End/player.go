@@ -15,6 +15,11 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/gorilla/mux"
+
+	"./stringgen"
+	"./websocket"
+
 	"github.com/zmb3/spotify"
 )
 
@@ -36,15 +41,121 @@ var html = `
 <a href="/player/previous">Previous Track</a><br/>
 <a href="/player/shuffle">Shuffle</a><br/>
 <a href="/player/search">Search</a><br />
+<a href="/player/viewqueue">View Queue</a><br />
 `
 
 var (
 	auth     = spotify.NewAuthenticator(redirectURI, spotify.ScopeUserReadCurrentlyPlaying, spotify.ScopeUserReadPlaybackState, spotify.ScopeUserModifyPlaybackState)
 	ch       = make(chan *spotify.Client)
-	state    = "abc123"
+	state    = "custom"
 	clientID = ""
 	secretID = ""
 )
+
+func player(w http.ResponseWriter, r *http.Request, client *spotify.Client) {
+	action := strings.TrimPrefix(r.URL.Path, "/player/")
+	fmt.Println("Got request for:", action)
+	var err error
+	switch action {
+	case "play":
+		err = client.Play()
+
+	case "pause":
+		err = client.Pause()
+	case "next":
+		err = client.Next()
+	case "previous":
+		err = client.Previous()
+	case "viewqueue":
+		result, err := client.PlayerCurrentlyPlaying()
+		if err != nil {
+			log.Fatal(err)
+		}
+		playListURI := result.PlaybackContext.URI
+		playListURIArr := strings.Split(string(playListURI), ":")
+		playListID := playListURIArr[len(playListURIArr)-1]
+		//log.Println("hello" + playListURIArr[len(playListURIArr)-1])
+		results, err2 := client.GetPlaylist(spotify.ID(playListID))
+		///client.CreatePlaylistForUser()
+		if err2 != nil {
+			log.Fatal(err2)
+		}
+		log.Println(results.Tracks.Tracks)
+
+	case "search":
+		results, err := client.Search("holiday", spotify.SearchTypeTrack)
+		if err != nil {
+			log.Fatal(err)
+		}
+		if results.Tracks != nil {
+			for _, item := range results.Tracks.Tracks {
+				err = client.QueueSong(item.ID)
+				if err != nil {
+					log.Fatal(err)
+				}
+			}
+		}
+	}
+	if err != nil {
+		log.Print(err)
+	}
+
+	w.Header().Set("Content-Type", "text/html")
+	fmt.Fprint(w, html)
+}
+
+func serveWs(pool *websocket.Pool, w http.ResponseWriter, r *http.Request) {
+	fmt.Println("Endpoint Hit: WebSocket")
+	conn, err := websocket.Upgrade(w, r)
+	if err != nil {
+		fmt.Fprintf(w, "%+v\n", err)
+	}
+
+	client := &websocket.Client{
+		ID:   stringgen.String(10),
+		Conn: conn,
+		Pool: pool,
+	}
+
+	pool.Register <- client
+	client.Read()
+}
+
+func setupRoutes(client *spotify.Client) {
+	pools := make(map[string]*websocket.Pool)
+
+	rtr := mux.NewRouter()
+
+	rtr.HandleFunc("/test", func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprintf(w, "Test Successful")
+	})
+	rtr.HandleFunc("/callback", completeAuth)
+	rtr.HandleFunc("/player/", func(w http.ResponseWriter, r *http.Request) {
+		player(w, r, client)
+	})
+	rtr.HandleFunc("/getconnectionlink", func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprintf(w, "nothing")
+	})
+	rtr.HandleFunc("/connectlobby/{id}", func(w http.ResponseWriter, r *http.Request) {
+		vars := mux.Vars(r)
+		varID := vars["id"]
+		if pool, ok := pools[varID]; ok {
+			serveWs(pool, w, r)
+		} else {
+			pool := websocket.NewPool(varID)
+			pools[varID] = pool
+
+			go pool.Start()
+
+			serveWs(pool, w, r)
+		}
+	})
+
+	/*rtr.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		log.Println("Got request for:", r.URL.String())
+	})*/
+	http.Handle("/", rtr)
+}
 
 func main() {
 	secretsFile, _ := ioutil.ReadFile("./secrets.json")
@@ -59,49 +170,7 @@ func main() {
 	var client *spotify.Client
 	var playerState *spotify.PlayerState
 
-	http.HandleFunc("/callback", completeAuth)
-
-	http.HandleFunc("/player/", func(w http.ResponseWriter, r *http.Request) {
-		action := strings.TrimPrefix(r.URL.Path, "/player/")
-		fmt.Println("Got request for:", action)
-		var err error
-		switch action {
-		case "play":
-			err = client.Play()
-		case "pause":
-			err = client.Pause()
-		case "next":
-			err = client.Next()
-		case "previous":
-			err = client.Previous()
-		case "shuffle":
-			playerState.ShuffleState = !playerState.ShuffleState
-			err = client.Shuffle(playerState.ShuffleState)
-		case "search":
-			results, err := client.Search("holiday", spotify.SearchTypeTrack)
-			if err != nil {
-				log.Fatal(err)
-			}
-			if results.Tracks != nil {
-				for _, item := range results.Tracks.Tracks {
-					err = client.QueueSong(item.ID)
-					if err != nil {
-						log.Fatal(err)
-					}
-				}
-			}
-		}
-		if err != nil {
-			log.Print(err)
-		}
-
-		w.Header().Set("Content-Type", "text/html")
-		fmt.Fprint(w, html)
-	})
-
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		log.Println("Got request for:", r.URL.String())
-	})
+	setupRoutes(client)
 
 	go func() {
 		// if you didn't store your ID and secret key in the specified environment variables,
@@ -138,13 +207,80 @@ func completeAuth(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Couldn't get token", http.StatusForbidden)
 		log.Fatal(err)
 	}
-	if st := r.FormValue("state"); st != state {
+	st := r.FormValue("state")
+	if st != state {
 		http.NotFound(w, r)
 		log.Fatalf("State mismatch: %s != %s\n", st, state)
 	}
+	fmt.Println(st)
 	// use the token to get an authenticated client
 	client := auth.NewClient(tok)
 	w.Header().Set("Content-Type", "text/html")
 	fmt.Fprintf(w, "Login Completed!"+html)
 	ch <- &client
 }
+
+/*
+package main
+
+import (
+	"fmt"
+	"log"
+	"net/http"
+
+	"example.com/main/database"
+	"example.com/main/stringgen"
+	"example.com/main/websocket"
+)
+
+var db *database.Database
+
+func homePage(w http.ResponseWriter, r *http.Request) {
+	fmt.Fprintf(w, "Welcome to the HomePage!")
+	fmt.Println("Endpoint Hit: homePage")
+}
+
+func testPage(w http.ResponseWriter, r *http.Request) {
+	fmt.Fprintf(w, "Test is successful")
+	fmt.Println("Endpoint Hit: test page")
+}
+
+func serveWs(pool *websocket.Pool, w http.ResponseWriter, r *http.Request) {
+	fmt.Println("Endpoint Hit: WebSocket")
+	conn, err := websocket.Upgrade(w, r)
+	if err != nil {
+		fmt.Fprintf(w, "%+v\n", err)
+	}
+
+	client := &websocket.Client{
+		ID:   stringgen.String(10),
+		Conn: conn,
+		Pool: pool,
+	}
+
+	pool.Register <- client
+	client.Read()
+}
+
+func setupRoutes() {
+	db = database.Connect()
+
+	db.Test()
+
+	pool := websocket.NewPool()
+
+	go pool.Start()
+
+	http.HandleFunc("/", homePage)
+	http.HandleFunc("/test", testPage)
+	http.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
+		serveWs(pool, w, r)
+	})
+}
+
+func main() {
+	setupRoutes()
+	log.Fatal(http.ListenAndServe(":8080", nil))
+}
+
+*/
