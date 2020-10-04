@@ -27,7 +27,7 @@ class JoinLobby extends React.Component {
   }
 
   render(){
-    const session = "/session/:"+this.state.value;
+    const session = "/session/"+this.state.value;
     return (
       <div>
         <h1>Join Lobby</h1>

@@ -47,9 +47,10 @@ var html = `
 var (
 	auth     = spotify.NewAuthenticator(redirectURI, spotify.ScopeUserReadCurrentlyPlaying, spotify.ScopeUserReadPlaybackState, spotify.ScopeUserModifyPlaybackState)
 	ch       = make(chan *spotify.Client)
-	state    = "custom"
+	state    = "test"
 	clientID = ""
 	secretID = ""
+	pools    = make(map[string]*websocket.Pool)
 )
 
 func player(w http.ResponseWriter, r *http.Request, client *spotify.Client) {
@@ -121,18 +122,13 @@ func serveWs(pool *websocket.Pool, w http.ResponseWriter, r *http.Request) {
 	client.Read()
 }
 
-func setupRoutes(client *spotify.Client) {
-	pools := make(map[string]*websocket.Pool)
-
+func setupRoutes() {
 	rtr := mux.NewRouter()
 
 	rtr.HandleFunc("/test", func(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, "Test Successful")
 	})
 	rtr.HandleFunc("/callback", completeAuth)
-	rtr.HandleFunc("/player/", func(w http.ResponseWriter, r *http.Request) {
-		player(w, r, client)
-	})
 	rtr.HandleFunc("/getconnectionlink", func(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, "nothing")
 	})
@@ -142,7 +138,8 @@ func setupRoutes(client *spotify.Client) {
 		if pool, ok := pools[varID]; ok {
 			serveWs(pool, w, r)
 		} else {
-			pool := websocket.NewPool(varID)
+			pool := websocket.NewPool(varID, clientID, secretID, auth)
+			fmt.Println(clientID, secretID)
 			pools[varID] = pool
 
 			go pool.Start()
@@ -151,9 +148,6 @@ func setupRoutes(client *spotify.Client) {
 		}
 	})
 
-	/*rtr.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		log.Println("Got request for:", r.URL.String())
-	})*/
 	http.Handle("/", rtr)
 }
 
@@ -166,58 +160,36 @@ func main() {
 	clientID = secrets.ClientID
 	secretID = secrets.SecretID
 
-	// We'll want these variables sooner rather than later
-	var client *spotify.Client
-	var playerState *spotify.PlayerState
-
-	setupRoutes(client)
-
-	go func() {
-		// if you didn't store your ID and secret key in the specified environment variables,
-		// you can set them manually here
-		auth.SetAuthInfo(clientID, secretID)
-
-		url := auth.AuthURL(state)
-		fmt.Println("Please log in to Spotify by visiting the following page in your browser:", url)
-
-		// wait for auth to complete
-		client = <-ch
-
-		// use the client to make calls that require authorization
-		user, err := client.CurrentUser()
-		if err != nil {
-			log.Fatal(err)
-		}
-		fmt.Println("You are logged in as:", user.ID)
-
-		playerState, err = client.PlayerState()
-		if err != nil {
-			log.Fatal(err)
-		}
-		fmt.Printf("Found your %s (%s)\n", playerState.Device.Type, playerState.Device.Name)
-	}()
+	setupRoutes()
 
 	http.ListenAndServe(":8080", nil)
 
 }
 
 func completeAuth(w http.ResponseWriter, r *http.Request) {
-	tok, err := auth.Token(state, r)
-	if err != nil {
-		http.Error(w, "Couldn't get token", http.StatusForbidden)
-		log.Fatal(err)
+	for _, pool := range pools {
+		tok, err := auth.Token(pool.ID, r)
+		if err != nil {
+			continue
+		}
+		st := r.FormValue("state")
+		if st != pool.ID {
+			http.NotFound(w, r)
+			log.Fatalf("State mismatch: %s != %s\n", st, pool.ID)
+		}
+		// use the token to get an authenticated client
+		client := auth.NewClient(tok)
+		fmt.Println("Login complete")
+
+		if err := pool.Host.Conn.WriteJSON(websocket.Message{Type: 1, Body: "connected"}); err != nil {
+			fmt.Println(err)
+			return
+		}
+
+		pool.SpotifyChan <- &client
+
 	}
-	st := r.FormValue("state")
-	if st != state {
-		http.NotFound(w, r)
-		log.Fatalf("State mismatch: %s != %s\n", st, state)
-	}
-	fmt.Println(st)
-	// use the token to get an authenticated client
-	client := auth.NewClient(tok)
-	w.Header().Set("Content-Type", "text/html")
-	fmt.Fprintf(w, "Login Completed!"+html)
-	ch <- &client
+
 }
 
 /*

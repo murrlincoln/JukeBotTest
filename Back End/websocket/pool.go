@@ -1,6 +1,7 @@
 package websocket
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 
@@ -19,24 +20,34 @@ type Pool struct {
 	Register           chan *Client
 	Unregister         chan *Client
 	Clients            map[*Client]bool
-	AddSong            chan Message
+	SearchSong         chan *ContentClient
+	AddSong            chan *ContentClient
+	Auth               spotify.Authenticator
 	Host               *Client
+	SpotifyChan        chan *spotify.Client
 	spotifyClient      *spotify.Client
 	spotifyPlayerState *spotify.PlayerState
 	ID                 string
+	ClientID           string
+	SecretID           string
 }
 
 /*
 * NewPool
 * @return a generated pool
  */
-func NewPool(ID string) *Pool {
+func NewPool(ID string, ClientID string, SecretID string, Auth spotify.Authenticator) *Pool {
 	return &Pool{
-		Register:   make(chan *Client),
-		Unregister: make(chan *Client),
-		Clients:    make(map[*Client]bool),
-		AddSong:    make(chan Message),
-		ID:         ID,
+		Register:    make(chan *Client),
+		Unregister:  make(chan *Client),
+		Clients:     make(map[*Client]bool),
+		SearchSong:  make(chan *ContentClient),
+		AddSong:     make(chan *ContentClient),
+		SpotifyChan: make(chan *spotify.Client),
+		Auth:        Auth,
+		ID:          ID,
+		ClientID:    ClientID,
+		SecretID:    SecretID,
 	}
 }
 
@@ -46,6 +57,39 @@ func (pool *Pool) Start() {
 		case client := <-pool.Register:
 			if len(pool.Clients) == 0 {
 				pool.Host = client
+
+				go func() {
+					// if you didn't store your ID and secret key in the specified environment variables,
+					// you can set them manually here
+					pool.Auth.SetAuthInfo(pool.ClientID, pool.SecretID)
+
+					url := pool.Auth.AuthURL(pool.ID)
+					//fmt.Println("Please log in to Spotify by visiting the following page in your browser:", url)
+
+					//pool.Host.Conn.WriteJSON(Message{Type: 0, Body: "hello"})
+					fmt.Println("Writing message to client now")
+					//ft.Println(url)
+					if err := client.Conn.WriteJSON(Message{Type: 0, Body: url}); err != nil {
+						fmt.Println(err)
+						return
+					}
+					// wait for auth to complete
+					pool.spotifyClient = <-pool.SpotifyChan
+
+					// use the client to make calls that require authorization
+					user, err := pool.spotifyClient.CurrentUser()
+					if err != nil {
+						log.Fatal(err)
+					}
+					fmt.Println("You are logged in as:", user.ID)
+
+					pool.spotifyPlayerState, err = pool.spotifyClient.PlayerState()
+					if err != nil {
+						log.Fatal(err)
+					}
+					fmt.Printf("Found your %s (%s)\n", pool.spotifyPlayerState.Device.Type, pool.spotifyPlayerState.Device.Name)
+				}()
+
 			}
 			pool.Clients[client] = true
 
@@ -66,14 +110,35 @@ func (pool *Pool) Start() {
 			}
 			break
 		case message := <-pool.AddSong:
-			//fmt.Println("The message is: ", message)
-			fmt.Println("Sending message to all clients in Pool")
-			for client := range pool.Clients {
-				if err := client.Conn.WriteJSON(message); err != nil {
-					fmt.Println(err)
-					return
+			fmt.Println("Adding Song")
+			fmt.Println(message.Content.SongID)
+			err := pool.spotifyClient.QueueSong(spotify.ID(message.Content.SongID))
+			if err != nil {
+				log.Fatal(err)
+			}
+			break
+		case message := <-pool.SearchSong:
+			fmt.Println("Searching song")
+			results, err := pool.spotifyClient.Search(message.Content.Song, spotify.SearchTypeTrack)
+			if err != nil {
+				log.Fatal(err)
+			}
+			songs := make([]*Song, 0)
+			if results.Tracks != nil {
+				for _, item := range results.Tracks.Tracks {
+					song := &Song{}
+					song.Album = item.Album.Name
+					song.Artist = item.Artists[0].Name
+					song.ID = item.ID.String()
+					song.Name = item.Name
+					songs = append(songs, song)
 				}
 			}
+			out, err := json.Marshal(songs)
+			if err != nil {
+				panic(err)
+			}
+			message.Client.Conn.WriteJSON(Message{Type: 2, Body: string(out)})
 		}
 
 	}

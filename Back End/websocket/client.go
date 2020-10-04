@@ -36,8 +36,15 @@ type Message struct {
  *  - Content:	Content struct
  */
 type MessageContent struct {
-	Type    string   `json:"type"`
-	Content *Content `json:"content"`
+	Type    string `json:"type"`
+	Content string `json:"content"`
+}
+
+type Song struct {
+	Name   string
+	Album  string
+	Artist string
+	ID     string
 }
 
 /*
@@ -64,6 +71,13 @@ type Response struct {
  */
 type Content struct {
 	TextMsg string `json:"textMsg,omitempty"`
+	Song    string `json:"songSearch,omitempty"`
+	SongID  string `json:"songID,omitempty"`
+}
+
+type ContentClient struct {
+	Client  *Client
+	Content *Content
 }
 
 /*
@@ -103,17 +117,46 @@ func (c *Client) Read() {
 			return
 		}
 		message := Message{Type: messageType, Body: string(p)}
+		fmt.Println(message)
 
 		messageContent := &MessageContent{
-			Content: &Content{},
+			//Content: &Content{},
 		}
 
 		err = json.Unmarshal(p, &messageContent)
 
 		fmt.Println("Type:", messageContent.Type)
-		fmt.Println("Content:", messageContent.Content.TextMsg)
+		fmt.Println("Content:", messageContent.Content)
+
+		if messageContent.Type == "searchSong" {
+			messageSong := &Content{}
+			messageClient := &ContentClient{}
+			messageClient.Client = c
+			messageClient.Content = messageSong
+
+			err = json.Unmarshal([]byte(messageContent.Content), &messageSong)
+			c.Pool.SearchSong <- messageClient
+		} else if messageContent.Type == "addSong" {
+			messageSong := &Content{}
+			messageClient := &ContentClient{}
+			messageClient.Client = c
+			messageClient.Content = messageSong
+
+			err = json.Unmarshal([]byte(messageContent.Content), &messageSong)
+			c.Pool.AddSong <- messageClient
+		}
+		/*out, _ := json.Marshal(messageContent)
+		messageContentTwo := &Content{}
+		_ = json.Unmarshal(out, messageContentTwo)
+		fmt.Println("string out", string(out))
+		fmt.Println(string(messageContentTwo.Song))
+		//fmt.Println(string(messageContent))
+		if messageContent.Type == "searchSong" {
+			c.Pool.SearchSong <- messageContent
+		}
+		/*fmt.Println("Content:", messageContent.Content.TextMsg)
 		//c.Pool.Broadcast <- message
 		fmt.Printf("Message Received: %+v\n", message)
-		fmt.Println("Client ID:", string(c.ID))
+		fmt.Println("Client ID:", string(c.ID))*/
 	}
 }
