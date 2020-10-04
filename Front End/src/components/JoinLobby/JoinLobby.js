@@ -1,11 +1,12 @@
 import React, { Component } from 'react';
-import SquareBtn from '../SquareBtn/SquareBtn';
+import './JoinLobby.css';
+
 
 import {
   BrowserRouter as Router,
   Switch,
   Route,
-  Link,
+  NavLink,
   useRouteMatch,
   useParams
 } from "react-router-dom";
@@ -32,8 +33,12 @@ class JoinLobby extends React.Component {
     return (
       <div>
         <h1>Join Lobby</h1>
-        <input type="text" value={this.state.value} onChange={this.handleChange} />
-        <Link to={session}>Join Session</Link>
+        <input value={this.state.value} className="sessionJoin" onChange={this.handleChange} />
+        
+        <div>
+          <NavLink to={session} className="navButton">Join Session</NavLink>
+        </div>
+        
       </div>
     );
   }

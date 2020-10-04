@@ -1,11 +1,13 @@
 import React, { Component } from 'react';
 import SquareBtn from '../SquareBtn/SquareBtn';
 import TwitterHandleInput from './../TwitterHandleInput/TwitterHandleInput';
+import './Menu.css';
+
 import {
   BrowserRouter as Router,
   Switch,
   Route,
-  Link,
+  NavLink,
   useRouteMatch,
   useParams
 } from "react-router-dom";
@@ -39,8 +41,26 @@ class Menu extends Component {
     return (
       <div>
         <h1>JukeBot</h1>
-        <Link to="/joinlobby">Join Lobby</Link>
-        <Link to="/createlobby">Create Lobby</Link>
+        <div>
+          <NavLink 
+            to="/joinlobby"
+            className = "navButton"
+          >Join Lobby</NavLink>
+        </div>
+        <br/>
+        <br/>
+        <br/>
+        <br/>
+        <br/>
+        <br/>
+        <div>
+        <NavLink 
+          to="/faq" 
+          className = "navButton"
+        >FAQ</NavLink>
+        </div>
+        
+        
       </div>
     );
   }

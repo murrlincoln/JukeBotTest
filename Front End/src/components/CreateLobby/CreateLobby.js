@@ -4,7 +4,7 @@ import {
   BrowserRouter as Router,
   Switch,
   Route,
-  Link,
+  NavLink,
   useRouteMatch,
   useParams
 } from "react-router-dom";
@@ -25,7 +25,10 @@ class CreateLobby extends Component {
     return (
       <div>
         <h1>Create Lobby</h1>
-        <Link to="/joinlobby">Login to Spotify</Link>
+        <NavLink 
+          to="/joinlobby"
+          className = "navButton"  
+        >Login to Spotify</NavLink>
       </div>
     );
   }

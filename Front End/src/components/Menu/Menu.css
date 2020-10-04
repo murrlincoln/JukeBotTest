@@ -1,0 +1,13 @@
+.navButton {
+  margin:50px;
+  background-color: aliceblue;
+  padding: 30px;
+  border-radius: 30px;
+  font-size: 30px;
+  color:#000;
+  margin-left: 40%;
+  position:absolute;
+  width: 160px;
+  text-align:center;
+  text-decoration: none;
+}
