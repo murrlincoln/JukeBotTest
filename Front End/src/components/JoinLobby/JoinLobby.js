@@ -1,5 +1,6 @@
 import React, { Component } from 'react';
 import SquareBtn from '../SquareBtn/SquareBtn';
+
 import {
   BrowserRouter as Router,
   Switch,
@@ -31,7 +32,6 @@ class JoinLobby extends React.Component {
     return (
       <div>
         <h1>Join Lobby</h1>
-
         <input type="text" value={this.state.value} onChange={this.handleChange} />
         <Link to={session}>Join Session</Link>
       </div>

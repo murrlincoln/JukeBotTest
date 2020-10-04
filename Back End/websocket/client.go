@@ -119,9 +119,7 @@ func (c *Client) Read() {
 		message := Message{Type: messageType, Body: string(p)}
 		fmt.Println(message)
 
-		messageContent := &MessageContent{
-			//Content: &Content{},
-		}
+		messageContent := &MessageContent{}
 
 		err = json.Unmarshal(p, &messageContent)
 
@@ -145,18 +143,5 @@ func (c *Client) Read() {
 			err = json.Unmarshal([]byte(messageContent.Content), &messageSong)
 			c.Pool.AddSong <- messageClient
 		}
-		/*out, _ := json.Marshal(messageContent)
-		messageContentTwo := &Content{}
-		_ = json.Unmarshal(out, messageContentTwo)
-		fmt.Println("string out", string(out))
-		fmt.Println(string(messageContentTwo.Song))
-		//fmt.Println(string(messageContent))
-		if messageContent.Type == "searchSong" {
-			c.Pool.SearchSong <- messageContent
-		}
-		/*fmt.Println("Content:", messageContent.Content.TextMsg)
-		//c.Pool.Broadcast <- message
-		fmt.Printf("Message Received: %+v\n", message)
-		fmt.Println("Client ID:", string(c.ID))*/
 	}
 }

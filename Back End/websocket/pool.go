@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"time"
 
 	"github.com/zmb3/spotify"
 )
@@ -27,6 +28,8 @@ type Pool struct {
 	SpotifyChan        chan *spotify.Client
 	spotifyClient      *spotify.Client
 	spotifyPlayerState *spotify.PlayerState
+	CurrentSong        string
+	HostName           string
 	ID                 string
 	ClientID           string
 	SecretID           string
@@ -51,7 +54,29 @@ func NewPool(ID string, ClientID string, SecretID string, Auth spotify.Authentic
 	}
 }
 
+func (pool *Pool) checkSong() {
+	playing, _ := pool.spotifyClient.PlayerCurrentlyPlaying()
+	name := playing.Item.Name + " - " + playing.Item.Artists[0].Name
+	if name != pool.CurrentSong {
+		pool.CurrentSong = name
+
+		for client, _ := range pool.Clients {
+			client.Conn.WriteJSON(Message{Type: 3, Body: name})
+			client.Conn.WriteJSON(Message{Type: 4, Body: pool.HostName})
+		}
+	}
+}
+
+func (pool *Pool) startPolling() {
+	for {
+		time.Sleep(2 * time.Second)
+		go pool.checkSong()
+	}
+}
+
 func (pool *Pool) Start() {
+	go pool.startPolling()
+
 	for {
 		select {
 		case client := <-pool.Register:
@@ -82,15 +107,19 @@ func (pool *Pool) Start() {
 						log.Fatal(err)
 					}
 					fmt.Println("You are logged in as:", user.ID)
-
+					pool.HostName = user.ID
 					pool.spotifyPlayerState, err = pool.spotifyClient.PlayerState()
 					if err != nil {
 						log.Fatal(err)
 					}
 					fmt.Printf("Found your %s (%s)\n", pool.spotifyPlayerState.Device.Type, pool.spotifyPlayerState.Device.Name)
+
 				}()
 
 			}
+			client.Conn.WriteJSON(Message{Type: 3, Body: pool.CurrentSong})
+			client.Conn.WriteJSON(Message{Type: 4, Body: pool.HostName})
+
 			pool.Clients[client] = true
 
 			fmt.Println("Size of Connection Pool: ", len(pool.Clients))

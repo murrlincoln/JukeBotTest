@@ -1,3 +1,45 @@
+@font-face {
+  font-family: 'pixel';
+  src: url('/public/ARCADECLASSIC.ttf');
+}
+
+*{
+  background-color: #45ceed;
+}
+th, td {
+  background-color: #f2f2f2;
+  text-align: left;
+  padding: 8px;
+}
+
+h1 {
+  font-family: pixel;
+  font-size: 500%;
+  color: #f5e9b5;
+  text-align: center;
+}
+h2 {
+  text-align: center;
+}
+p {
+  text-align: center;
+}
+table {
+  width:80%;
+  margin-left: 10%;
+  margin-right: 10%;
+}
+
+
+.searchBox {
+  margin: auto;
+  width: 16%;
+  padding: 10px;
+}
+
+
+
+
 .App {
   text-align: center;
 }

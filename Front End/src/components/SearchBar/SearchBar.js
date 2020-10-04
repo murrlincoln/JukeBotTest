@@ -7,26 +7,39 @@ class SearchBar extends Component {
     super(props)
 
     this.state = {
-      startCallback: this.props.parentCallback,
-      name: this.props.name
+      callback: this.props.callback,
+      value: "",
     }
+
+    this.handleChange = this.handleChange.bind(this);
+    this.searchSong = this.searchSong.bind(this);
   }
 
+  searchSong() {
+    console.log(this.state.value)
+    this.state.callback(this.state.value)
+  }
+
+  handleChange(event) {
+    this.setState({value: event.target.value});
+    console.log(this.state.value)
+  }
 
   render(){
     return (
-      <div className="container">
-        <div className="center">
-          <button className="btn" onClick={this.state.startCallback}>
-            <svg width="180px" height="60px" viewBox="0 0 180 60" className="border">
-              <polyline points="179,1 179,59 1,59 1,1 179,1" className="bg-line" />
-              <polyline points="179,1 179,59 1,59 1,1 179,1" className="hl-line" />
-            </svg>
-            <span>{this.props.name}</span>
-          </button>
-        </div>
+      <div className="cover">
+        <form method="get" action="">
+          <div className="tb">
+            <div className="td"><input type="text" value={this.state.value} onChange={this.handleChange} placeholder="Enter Song" required/></div>
+            <div className="td s-cover">
+              <button type="button" onClick={this.searchSong}>
+                <div className="s-circle"></div>
+                <span></span>
+              </button>
+            </div>
+          </div>
+        </form>
       </div>
-      
     );
   }
   

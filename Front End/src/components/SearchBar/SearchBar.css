@@ -18,21 +18,20 @@ input, button
     padding: 0;
     margin: 0;
     border: 0;
-    background-color: transparent;
+    outline: none;
 }
 
-#cover
+.cover
 {
-    position: absolute;
+    position: relative;
     top: 50%;
     left: 0;
     right: 0;
     width: 550px;
-    padding: 35px;
-    margin: -83px auto 0 auto;
+    padding: 15px;
+    margin: -40px auto 0 auto;
     background-color: #ff7575;
     border-radius: 20px;
-    box-shadow: 0 10px 40px #ff7c7c, 0 0 0 20px #ffffffeb;
     transform: scale(0.6);
 }
 
@@ -54,7 +53,7 @@ input[type="text"]::placeholder
     color: #e16868;
 }
 
-#s-cover
+.s-cover
 {
     width: 1px;
     padding-left: 35px;
@@ -69,7 +68,7 @@ button
     cursor: pointer;
 }
 
-#s-circle
+.s-circle
 {
     position: relative;
     top: -8px;
@@ -112,7 +111,7 @@ button span:before, button span:after
     transition: 0.5s ease all;
 }
 
-#s-cover:hover #s-circle
+.s-cover:hover .s-circle
 {
     top: -1px;
     width: 67px;
@@ -122,7 +121,7 @@ button span:before, button span:after
     border-radius: 20px;
 }
 
-#s-cover:hover span
+.s-cover:hover span
 {
     top: 50%;
     left: 56px;
@@ -131,37 +130,20 @@ button span:before, button span:after
     transform: rotateZ(0);
 }
 
-#s-cover:hover button span:before
+.s-cover:hover button span:before
 {
     bottom: 11px;
     transform: rotateZ(52deg);
 }
 
-#s-cover:hover button span:after
+.s-cover:hover button span:after
 {
     bottom: -11px;
     transform: rotateZ(-52deg);
 }
-#s-cover:hover button span:before, #s-cover:hover button span:after
+.s-cover:hover button span:before, #s-cover:hover button span:after
 {
     right: -6px;
     width: 40px;
     background-color: #fff;
-}
-
-#ytd-url {
-  display: block;
-  position: fixed;
-  right: 0;
-  bottom: 0;
-  padding: 10px 14px;
-  margin: 20px;
-  color: #fff;
-  font-family: Nunito;
-  font-size: 14px;
-  text-decoration: none;
-  background-color: #ff7575;
-  border-radius: 4px;
-  box-shadow: 0 10px 20px -5px rgba(255, 117, 117, 0.86);
-  z-index: 125;
 }
