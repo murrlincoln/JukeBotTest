@@ -194,7 +194,6 @@ func completeAuth(w http.ResponseWriter, r *http.Request) {
 		// use the token to get an authenticated client
 		client := auth.NewClient(tok)
 		fmt.Println("Login complete")
-
 		if err := pool.Host.Conn.WriteJSON(websocket.Message{Type: 1, Body: "connected"}); err != nil {
 			fmt.Println(err)
 			return
