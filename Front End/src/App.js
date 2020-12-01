@@ -4,6 +4,7 @@ import Menu from './components/Menu/Menu';
 import Session from './components/Session/Session';
 import CreateLobby from './components/CreateLobby/CreateLobby';
 import JoinLobby from './components/JoinLobby/JoinLobby';
+import faq from './components/faq/faq';
 import {
   BrowserRouter as Router,
   Switch,
@@ -41,6 +42,9 @@ class App extends Component {
             <Route path="/createlobby">
               <CreateLobby />
             </Route>
+            <Route path = "/faq/">
+               <faq />
+             </Route>
             <Route path="/">
               <Menu />
             </Route>
