@@ -42,7 +42,7 @@ class App extends Component {
             <Route path="/createlobby">
               <CreateLobby />
             </Route>
-            <Route path = "/faq/">
+            <Route path = "/faq">
                <faq />
              </Route>
             <Route path="/">
