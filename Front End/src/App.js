@@ -4,6 +4,10 @@ import Menu from './components/Menu/Menu';
 import Session from './components/Session/Session';
 import CreateLobby from './components/CreateLobby/CreateLobby';
 import JoinLobby from './components/JoinLobby/JoinLobby';
+//import faq from './components/faq/faq';
+
+
+
 import {
   BrowserRouter as Router,
   Switch,
@@ -12,6 +16,8 @@ import {
   useRouteMatch,
   useParams
 } from "react-router-dom";
+
+
 
 function makeid(length) {
   var result           = '';
@@ -44,6 +50,9 @@ class App extends Component {
             <Route path="/">
               <Menu />
             </Route>
+            [<Route path="/faq">
+              <faq />
+            [</Route>]
           </Switch>
         </div>
       </Router>
